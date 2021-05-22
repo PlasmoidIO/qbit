@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -19,7 +18,7 @@ type JwtHandler struct {
 }
 
 type JwtHeader struct {
-	Algo string `json:"algo"`
+	Algo string `json:"alg"`
 	Type string `json:"typ"`
 }
 
@@ -29,14 +28,7 @@ type JwtClaim struct {
 	ExpireAt int64  `json:"exp"`
 }
 
-func NewJwtHandler(expirationHours int) JwtHandler {
-	key, err := rsa.GenerateKey(rand.Reader, 1024)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Printf("Public key: %s\n", base64.RawURLEncoding.EncodeToString(x509.MarshalPKCS1PublicKey(&key.PublicKey)))
-
+func NewJwtHandler(key *rsa.PrivateKey, expirationHours int) JwtHandler {
 	return JwtHandler{
 		PrivateKey:      key,
 		ExpirationHours: expirationHours,
@@ -56,12 +48,13 @@ func (j *JwtClaim) String() string {
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println(string(b))
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 
 func (j *JwtHandler) GenerateToken(username string) string {
 	header := JwtHeader{
-		Algo: "rs256",
+		Algo: "RS256",
 		Type: "JWT",
 	}
 
@@ -78,12 +71,14 @@ func (j *JwtHandler) GenerateToken(username string) string {
 
 func (j *JwtHandler) createSignature(header JwtHeader, claim JwtClaim) string {
 	payload := fmt.Sprintf("%s.%s", header.String(), claim.String())
+	fmt.Printf("(authentication/jwt.go) Header: %v\nClaim: %v\n\n", header, claim)
 	hash := sha256.Sum256([]byte(payload))
 
-	signature, err := rsa.SignPSS(rand.Reader, j.PrivateKey, crypto.SHA256, hash[:], nil)
+	signature, err := rsa.SignPKCS1v15(rand.Reader, j.PrivateKey, crypto.SHA256, hash[:])
 	if err != nil {
 		log.Fatalf("Error signing: %s\n", err)
 	}
 
-	return base64.RawURLEncoding.EncodeToString(signature)
+	sig := base64.RawURLEncoding.EncodeToString(signature)
+	return sig
 }

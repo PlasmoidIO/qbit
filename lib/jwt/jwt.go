@@ -4,15 +4,18 @@ import (
 	"crypto"
 	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"strings"
 )
 
 type JwtHeader struct {
-	Algo string `json:"algo"`
+	Algo string `json:"alg"`
 	Type string `json:"typ"`
 }
 
@@ -38,36 +41,38 @@ func (j *JwtClaim) String() string {
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 
-func ValidateToken(token string, pub *rsa.PublicKey) *JwtClaim {
+func ValidateToken(token string, key *rsa.PublicKey) (*JwtClaim, bool) {
 	arr := strings.Split(token, ".")
 	if len(arr) < 3 {
-		return nil
+		return nil, false
 	}
 
 	header, err := ToHeader(arr[0])
 	if err != nil {
 		panic(err)
-		return nil
+		return nil, false
 	}
 
 	claim, err := ToClaim(arr[1])
 	if err != nil {
 		panic(err)
-		return nil
+		return claim, false
 	}
 
-	hash := sha256.Sum256([]byte(fmt.Sprintf("%s.%s", header.String(), claim.String())))
+	payload := fmt.Sprintf("%s.%s", header.String(), claim.String())
+	fmt.Printf("(jwt/jwt.go) Header: %v\nClaim: %v\n\n", *header, *claim)
+	hash := sha256.Sum256([]byte(payload))
 
 	signature, err := base64.RawURLEncoding.DecodeString(arr[2])
 	if err != nil {
-		return nil
-	}
-	if err := rsa.VerifyPSS(pub, crypto.SHA256, hash[:], signature, nil); err != nil {
-		panic(err)
-		return nil
+		return claim, false
 	}
 
-	return claim
+	if err := rsa.VerifyPKCS1v15(key, crypto.SHA256, hash[:], signature); err != nil {
+		panic(err)
+	}
+
+	return claim, true
 }
 
 func ToHeader(encoded string) (*JwtHeader, error) {
@@ -92,4 +97,24 @@ func ToClaim(encoded string) (*JwtClaim, error) {
 		return nil, err
 	}
 	return &claim, nil
+}
+
+func ReadPublicKeyFile(path string) (*rsa.PublicKey, error) {
+	contents, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("error reading file: %s", err)
+	}
+	data, rest := pem.Decode(contents)
+	if len(rest) > 0 {
+		return nil, fmt.Errorf("public rsa file too large")
+	}
+	key, err := x509.ParsePKIXPublicKey(data.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	pub, ok := key.(*rsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("could not parse pubkey")
+	}
+	return pub, nil
 }
