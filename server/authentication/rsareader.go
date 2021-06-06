@@ -5,14 +5,9 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 )
 
-func ReadPrivateKeyFile(path string) (*rsa.PrivateKey, error) {
-	contents, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("error reading file: %s", err)
-	}
+func ReadPrivateKey(contents []byte) (*rsa.PrivateKey, error) {
 	data, rest := pem.Decode(contents)
 	if len(rest) > 0 {
 		return nil, fmt.Errorf("private rsa file too large")
@@ -21,11 +16,7 @@ func ReadPrivateKeyFile(path string) (*rsa.PrivateKey, error) {
 	return x509.ParsePKCS1PrivateKey(data.Bytes)
 }
 
-func ReadPublicKeyFile(path string) (*rsa.PublicKey, error) {
-	contents, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("error reading file: %s", err)
-	}
+func ReadPublicKey(contents []byte) (*rsa.PublicKey, error) {
 	data, rest := pem.Decode(contents)
 	if len(rest) > 0 {
 		return nil, fmt.Errorf("public rsa file too large")

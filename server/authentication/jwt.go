@@ -48,7 +48,6 @@ func (j *JwtClaim) String() string {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(string(b))
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 
@@ -66,12 +65,13 @@ func (j *JwtHandler) GenerateToken(username string) string {
 
 	signature := j.createSignature(header, claim)
 
+	fmt.Printf("[+] Token generated for user: %s\n", username)
+
 	return fmt.Sprintf("%s.%s.%s", header.String(), claim.String(), signature)
 }
 
 func (j *JwtHandler) createSignature(header JwtHeader, claim JwtClaim) string {
 	payload := fmt.Sprintf("%s.%s", header.String(), claim.String())
-	fmt.Printf("(authentication/jwt.go) Header: %v\nClaim: %v\n\n", header, claim)
 	hash := sha256.Sum256([]byte(payload))
 
 	signature, err := rsa.SignPKCS1v15(rand.Reader, j.PrivateKey, crypto.SHA256, hash[:])

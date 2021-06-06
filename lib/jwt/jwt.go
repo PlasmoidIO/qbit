@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -8,11 +9,26 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"strings"
 )
+
+type JwtValidator struct {
+	key *rsa.PublicKey
+}
+
+func NewValidator() (*JwtValidator, error) {
+	key, err := FetchPublicKey()
+	if err != nil {
+		return nil, err
+	}
+	return &JwtValidator{key: key}, nil
+}
 
 type JwtHeader struct {
 	Algo string `json:"alg"`
@@ -41,26 +57,23 @@ func (j *JwtClaim) String() string {
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 
-func ValidateToken(token string, key *rsa.PublicKey) (*JwtClaim, bool) {
+func (j *JwtValidator) ValidateToken(token string) (*JwtClaim, bool) {
 	arr := strings.Split(token, ".")
 	if len(arr) < 3 {
 		return nil, false
 	}
 
-	header, err := ToHeader(arr[0])
+	header, err := j.ToHeader(arr[0])
 	if err != nil {
-		panic(err)
 		return nil, false
 	}
 
-	claim, err := ToClaim(arr[1])
+	claim, err := j.ToClaim(arr[1])
 	if err != nil {
-		panic(err)
 		return claim, false
 	}
 
 	payload := fmt.Sprintf("%s.%s", header.String(), claim.String())
-	fmt.Printf("(jwt/jwt.go) Header: %v\nClaim: %v\n\n", *header, *claim)
 	hash := sha256.Sum256([]byte(payload))
 
 	signature, err := base64.RawURLEncoding.DecodeString(arr[2])
@@ -68,14 +81,14 @@ func ValidateToken(token string, key *rsa.PublicKey) (*JwtClaim, bool) {
 		return claim, false
 	}
 
-	if err := rsa.VerifyPKCS1v15(key, crypto.SHA256, hash[:], signature); err != nil {
-		panic(err)
+	if err := rsa.VerifyPKCS1v15(j.key, crypto.SHA256, hash[:], signature); err != nil {
+		return claim, false
 	}
 
 	return claim, true
 }
 
-func ToHeader(encoded string) (*JwtHeader, error) {
+func (j *JwtValidator) ToHeader(encoded string) (*JwtHeader, error) {
 	var header JwtHeader
 	b, err := base64.RawURLEncoding.DecodeString(encoded)
 	if err != nil {
@@ -87,7 +100,7 @@ func ToHeader(encoded string) (*JwtHeader, error) {
 	return &header, nil
 }
 
-func ToClaim(encoded string) (*JwtClaim, error) {
+func (j *JwtValidator) ToClaim(encoded string) (*JwtClaim, error) {
 	var claim JwtClaim
 	b, err := base64.RawURLEncoding.DecodeString(encoded)
 	if err != nil {
@@ -99,8 +112,13 @@ func ToClaim(encoded string) (*JwtClaim, error) {
 	return &claim, nil
 }
 
-func ReadPublicKeyFile(path string) (*rsa.PublicKey, error) {
-	contents, err := ioutil.ReadFile(path)
+func FetchPublicKey() (*rsa.PublicKey, error) {
+	resp, err := http.Get("http://localhost:8080/api/pubkey")
+	if err != nil {
+		return nil, fmt.Errorf("error fetching pubkey: %s", err)
+	}
+	defer resp.Body.Close()
+	contents, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("error reading file: %s", err)
 	}
@@ -117,4 +135,47 @@ func ReadPublicKeyFile(path string) (*rsa.PublicKey, error) {
 		return nil, fmt.Errorf("could not parse pubkey")
 	}
 	return pub, nil
+}
+
+// @returns (token, success)
+func GetToken(username string, password string) (string, error) {
+	type Payload struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+
+	payload := Payload{
+		Username: username,
+		Password: password,
+	}
+
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := http.Post("http://localhost:8080/api/createToken", "application/json", bytes.NewBuffer(data))
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	var responseData map[string]interface{}
+	if err := json.Unmarshal(body, &responseData); err != nil {
+		return "", err
+	}
+
+	if err, has := responseData["error"]; has {
+		return "", errors.New(err.(string))
+	}
+	if token, has := responseData["token"]; has {
+		return token.(string), nil
+	}
+
+	return "", fmt.Errorf("invalid response")
 }
