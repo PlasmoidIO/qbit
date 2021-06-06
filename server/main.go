@@ -15,7 +15,62 @@ type App struct {
 	UserProfileManager *authentication.UserProfileManager
 }
 
-func (a *App) createToken(w http.ResponseWriter, r *http.Request) {
+func (a *App) register(w http.ResponseWriter, r *http.Request) {
+	type ErrorResponse struct {
+		Error string `json:"error"`
+	}
+
+	type SuccessResponse struct {
+		Username string `json:"username"`
+	}
+
+	username := ""
+	password := ""
+
+	if r.Header.Get("Content-Type") == "application/json" {
+		var data map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+			fmt.Printf("error parsing json: %s\n", err)
+			return
+		}
+
+		if u, has := data["username"]; has {
+			u, ok := u.(string)
+			if ok {
+				username = u
+			}
+		}
+
+		if p, has := data["password"]; has {
+			p, ok := p.(string)
+			if ok {
+				password = p
+			}
+		}
+	} else {
+		if err := r.ParseForm(); err != nil {
+			respondWithJSON(w, 400, ErrorResponse{"invalid data specified"})
+			return
+		}
+
+		username = r.FormValue("username")
+		password = r.FormValue("password")
+	}
+
+	if username == "" || password == "" {
+		respondWithJSON(w, 400, ErrorResponse{"invalid data: must specify 'username' and 'password'"})
+		return
+	}
+
+	if err := a.UserProfileManager.RegisterUser(username, password); err != nil {
+		respondWithJSON(w, 400, ErrorResponse{err.Error()})
+		return
+	}
+
+	respondWithJSON(w, 200, SuccessResponse{username})
+}
+
+func (a *App) login(w http.ResponseWriter, r *http.Request) {
 	type ErrorResponse struct {
 		Error string `json:"error"`
 	}
@@ -103,7 +158,7 @@ func main() {
 	}
 	jwtHandler := authentication.NewJwtHandler(privateKey, 24)
 
-	profileManager, err := authentication.NewProfileManager("", "", "", "")
+	profileManager, err := authentication.NewProfileManager("127.0.0.1:3306", "qbit", "qbit", "qbit")
 	if err != nil {
 		log.Fatalf("error initializing profile manager: %s\n", err)
 		return
@@ -116,7 +171,8 @@ func main() {
 	}
 
 	router := mux.NewRouter()
-	router.HandleFunc("/api/createToken", app.createToken)
+	router.HandleFunc("/api/login", app.login)
+
 	router.HandleFunc("/api/pubkey", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = fmt.Fprint(w, string(publicFile))
 	})

@@ -154,7 +154,7 @@ func GetToken(username string, password string) (string, error) {
 		return "", err
 	}
 
-	resp, err := http.Post("http://localhost:8080/api/createToken", "application/json", bytes.NewBuffer(data))
+	resp, err := http.Post("http://localhost:8080/api/login", "application/json", bytes.NewBuffer(data))
 	if err != nil {
 		return "", err
 	}
@@ -171,11 +171,65 @@ func GetToken(username string, password string) (string, error) {
 	}
 
 	if err, has := responseData["error"]; has {
-		return "", errors.New(err.(string))
+		errorMsg, ok := err.(string)
+		if ok {
+			return "", errors.New(errorMsg)
+		}
 	}
 	if token, has := responseData["token"]; has {
-		return token.(string), nil
+		tok, ok := token.(string)
+		if ok {
+			return tok, nil
+		}
 	}
 
 	return "", fmt.Errorf("invalid response")
+}
+
+func Register(username string, password string) error {
+	type Payload struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+
+	payload := Payload{
+		Username: username,
+		Password: password,
+	}
+
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	resp, err := http.Post("http://localhost:8080/api/register", "application/json", bytes.NewBuffer(data))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	var responseData map[string]interface{}
+	if err := json.Unmarshal(body, &responseData); err != nil {
+		return err
+	}
+
+	if err, has := responseData["error"]; has {
+		errorMsg, ok := err.(string)
+		if ok {
+			return errors.New(errorMsg)
+		}
+	}
+	if username, has := responseData["username"]; has {
+		username, ok := username.(string)
+		if ok && username == payload.Username {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("invalid response")
 }
