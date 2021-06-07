@@ -158,7 +158,7 @@ func main() {
 	}
 	jwtHandler := authentication.NewJwtHandler(privateKey, 24)
 
-	profileManager, err := authentication.NewProfileManager("srv-captain--qbit-db-db:3306", "qbit", "qbit", "qbit")
+	profileManager, err := authentication.NewProfileManager("srv-captain--qbit-db:3306", "qbit", "root", "qbit")
 	if err != nil {
 		log.Fatalf("error initializing profile manager: %s\n", err)
 		return
@@ -177,6 +177,7 @@ func main() {
 		_, _ = fmt.Fprint(w, string(publicFile))
 	})
 
+	fmt.Println("Listening on port 80...")
 	if err := http.ListenAndServe(":80", router); err != nil {
 		fmt.Printf("Error: %s\n", err)
 	}
