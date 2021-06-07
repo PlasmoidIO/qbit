@@ -13,6 +13,7 @@ type UserProfileManager struct {
 
 func NewProfileManager(address string, database string, username string, password string) (*UserProfileManager, error) {
 	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s", username, password, address, database))
+	fmt.Printf("Initializing profile manager at address: %s@%s:%s/%s\n", username, address, password, database)
 	if err != nil {
 		return nil, err
 	}
