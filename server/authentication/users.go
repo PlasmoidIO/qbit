@@ -16,7 +16,7 @@ func NewProfileManager(address string, database string, username string, passwor
 	if err != nil {
 		return nil, err
 	}
-	query := "CREATE TABLE users IF NOT EXISTS (id INT PRIMARY KEY AUTO_INCREMENT, username VARCHAR(100) NOT NULL, password VARCHAR(72) NOT NULL)"
+	query := "CREATE TABLE IF NOT EXISTS users (id INT PRIMARY KEY AUTO_INCREMENT, username VARCHAR(100) NOT NULL, password VARCHAR(72) NOT NULL)"
 	if _, err := db.Exec(query); err != nil {
 		return nil, fmt.Errorf("initializing table error - %s", err)
 	}
