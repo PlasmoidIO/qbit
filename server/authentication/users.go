@@ -5,7 +5,6 @@ import (
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"golang.org/x/crypto/bcrypt"
-	"log"
 )
 
 type UserProfileManager struct {
@@ -43,23 +42,16 @@ func (u *UserProfileManager) RegisterUser(username string, password string) erro
 }
 
 func (u *UserProfileManager) AreCredentialsValid(username string, password string) bool {
-	rows, err := u.Database.Query("SELECT * FROM users WHERE username=?", username)
+	rows, err := u.Database.Query("SELECT password FROM users WHERE username=?", username)
 	if err != nil || !rows.Next() {
 		return false
 	}
 
-	type UserEntry struct {
-		id       int
-		username string
-		password string
-	}
-
-	var entry UserEntry
-	if err := rows.Scan(&entry); err != nil {
-		log.Fatal(err)
+	var hash string
+	if err := rows.Scan(&hash); err != nil {
 		return false
 	}
-	return u.IsPasswordValid(password, entry.password)
+	return u.IsPasswordValid(password, hash)
 }
 
 func (u *UserProfileManager) IsPasswordValid(password string, hash string) bool {
