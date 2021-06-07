@@ -158,7 +158,7 @@ func main() {
 	}
 	jwtHandler := authentication.NewJwtHandler(privateKey, 24)
 
-	profileManager, err := authentication.NewProfileManager("127.0.0.1:3306", "qbit", "qbit", "qbit")
+	profileManager, err := authentication.NewProfileManager("srv-captain--qbit-db-db:3306", "qbit", "qbit", "qbit")
 	if err != nil {
 		log.Fatalf("error initializing profile manager: %s\n", err)
 		return
