@@ -93,15 +93,13 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if u, has := data["username"]; has {
-			u, ok := u.(string)
-			if ok {
+			if u, ok := u.(string); ok {
 				username = u
 			}
 		}
 
 		if p, has := data["password"]; has {
-			p, ok := p.(string)
-			if ok {
+			if p, ok := p.(string); ok {
 				password = p
 			}
 		}
