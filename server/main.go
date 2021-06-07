@@ -172,7 +172,7 @@ func main() {
 
 	router := mux.NewRouter()
 	router.HandleFunc("/api/login", app.login)
-
+	router.HandleFunc("/api/register", app.register)
 	router.HandleFunc("/api/pubkey", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = fmt.Fprint(w, string(publicFile))
 	})
