@@ -154,7 +154,7 @@ func GetToken(username string, password string) (string, error) {
 		return "", err
 	}
 
-	resp, err := http.Post("http://qbit.plasmoid.io/api/login", "application/json", bytes.NewBuffer(data))
+	resp, err := http.Post("https://qbit.plasmoid.io/api/login", "application/json", bytes.NewBuffer(data))
 	if err != nil {
 		return "", err
 	}
