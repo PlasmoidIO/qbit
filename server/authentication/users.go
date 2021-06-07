@@ -44,6 +44,11 @@ func (u *UserProfileManager) RegisterUser(username string, password string) erro
 func (u *UserProfileManager) AreCredentialsValid(username string, password string) bool {
 	rows, err := u.Database.Query("SELECT * FROM users WHERE username=?", username)
 	if err != nil || !rows.Next() {
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			fmt.Println("no rows")
+		}
 		return false
 	}
 
@@ -55,6 +60,7 @@ func (u *UserProfileManager) AreCredentialsValid(username string, password strin
 
 	var entry UserEntry
 	if err := rows.Scan(&entry); err != nil {
+		fmt.Println("cant scan")
 		return false
 	}
 	return u.IsPasswordValid(password, entry.password)
