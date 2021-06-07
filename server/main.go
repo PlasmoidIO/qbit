@@ -27,37 +27,9 @@ func (a *App) register(w http.ResponseWriter, r *http.Request) {
 		Username string `json:"username"`
 	}
 
-	username := ""
-	password := ""
-
-	if r.Header.Get("Content-Type") == "application/json" {
-		var data map[string]interface{}
-		if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-			fmt.Printf("error parsing json: %s\n", err)
-			return
-		}
-
-		if u, has := data["username"]; has {
-			u, ok := u.(string)
-			if ok {
-				username = u
-			}
-		}
-
-		if p, has := data["password"]; has {
-			p, ok := p.(string)
-			if ok {
-				password = p
-			}
-		}
-	} else {
-		if err := r.ParseForm(); err != nil {
-			respondWithJSON(w, 400, ErrorResponse{"invalid data specified"})
-			return
-		}
-
-		username = r.FormValue("username")
-		password = r.FormValue("password")
+	username, password, proceed := getUsernamePasswordPair(w, r)
+	if !proceed {
+		return
 	}
 
 	if username == "" || password == "" {
@@ -73,6 +45,44 @@ func (a *App) register(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, 200, SuccessResponse{username})
 }
 
+// function to get "username" field and "password" field from request body
+func getUsernamePasswordPair(w http.ResponseWriter, r *http.Request) (string, string, bool) {
+	type ErrorResponse struct {
+		Error string `json:"error"`
+	}
+
+	var username string
+	var password string
+
+	switch contentType := r.Header.Get("Content-Type"); contentType {
+	case "application/json":
+		type IncomingDataPacket struct {
+			Username string `json:"username"`
+			Password string `json:"password"`
+		}
+		var packet IncomingDataPacket
+
+		if err := json.NewDecoder(r.Body).Decode(&packet); err != nil {
+			fmt.Printf("invaild data received: %s\n", err)
+			respondWithJSON(w, 400, ErrorResponse{"invalid json data submitted"})
+			return username, password, false
+		}
+		username, password = packet.Username, packet.Password
+	case "application/x-www-form-urlencoded":
+		if r.ParseForm() != nil {
+			respondWithJSON(w, 400,
+				ErrorResponse{"invalid data submitted"})
+			return username, password, false
+		}
+		username, password = r.FormValue("username"), r.FormValue("password")
+	default:
+		respondWithJSON(w, 400, ErrorResponse{"invalid content type: '" + contentType + "'"})
+		return username, password, false
+	}
+
+	return username, password, true
+}
+
 func (a *App) login(w http.ResponseWriter, r *http.Request) {
 	type ErrorResponse struct {
 		Error string `json:"error"`
@@ -82,35 +92,9 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) {
 		Token string `json:"token"`
 	}
 
-	username := ""
-	password := ""
-
-	if r.Header.Get("Content-Type") == "application/json" {
-		var data map[string]interface{}
-		if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-			fmt.Printf("error parsing json: %s\n", err)
-			return
-		}
-
-		if u, has := data["username"]; has {
-			if u, ok := u.(string); ok {
-				username = u
-			}
-		}
-
-		if p, has := data["password"]; has {
-			if p, ok := p.(string); ok {
-				password = p
-			}
-		}
-	} else {
-		if err := r.ParseForm(); err != nil {
-			respondWithJSON(w, 400, ErrorResponse{"invalid data specified"})
-			return
-		}
-
-		username = r.FormValue("username")
-		password = r.FormValue("password")
+	username, password, proceed := getUsernamePasswordPair(w, r)
+	if !proceed {
+		return
 	}
 
 	if username == "" || password == "" {
