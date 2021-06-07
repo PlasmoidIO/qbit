@@ -1,10 +1,13 @@
 package main
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"github.com/gorilla/mux"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"qbit/server/authentication"
@@ -138,26 +141,31 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	_, err = w.Write(res)
 }
 
+func getPublicKeyPem(key *rsa.PublicKey) (string, error) {
+	b, err := x509.MarshalPKIXPublicKey(key)
+	if err != nil {
+		return "", err
+	}
+	keyPem := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PUBLIC KEY",
+		Bytes: b,
+	})
+	return string(keyPem), nil
+}
+
 func main() {
-	privateFile, err := ioutil.ReadFile("private_key.pem")
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		log.Fatalf("error reading private key file: %s\n", err)
+		log.Fatalf("error creating key pair: %s\n", err)
 		return
 	}
-	publicFile, err := ioutil.ReadFile("public_key.pem")
+
+	pubKey, err := getPublicKeyPem(&privateKey.PublicKey)
 	if err != nil {
-		log.Fatalf("error reading public key file: %s\n", err)
+		log.Fatalf("error marshalling to pubkey: %s\n", err)
 		return
 	}
-	privateKey, err := authentication.ReadPrivateKey(privateFile)
-	if err != nil {
-		log.Fatalf("private key invalid")
-		return
-	}
-	if _, err := authentication.ReadPublicKey(publicFile); err != nil {
-		log.Fatalf("public key invalid")
-		return
-	}
+
 	jwtHandler := authentication.JwtHandler{
 		PrivateKey:      privateKey,
 		ExpirationHours: 24,
@@ -179,7 +187,7 @@ func main() {
 	router.HandleFunc("/api/login", app.login)
 	router.HandleFunc("/api/register", app.register)
 	router.HandleFunc("/api/pubkey", func(w http.ResponseWriter, r *http.Request) {
-		_, _ = fmt.Fprint(w, string(publicFile))
+		_, _ = fmt.Fprint(w, pubKey)
 	})
 	router.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "https://google.com/", 302)
