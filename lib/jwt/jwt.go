@@ -18,30 +18,30 @@ import (
 	"strings"
 )
 
-type JwtValidator struct {
+type Validator struct {
 	key *rsa.PublicKey
 }
 
-func NewValidator() (*JwtValidator, error) {
+func NewValidator() (*Validator, error) {
 	key, err := FetchPublicKey()
 	if err != nil {
 		return nil, err
 	}
-	return &JwtValidator{key: key}, nil
+	return &Validator{key: key}, nil
 }
 
-type JwtHeader struct {
+type Header struct {
 	Algo string `json:"alg"`
 	Type string `json:"typ"`
 }
 
-type JwtClaim struct {
+type Claim struct {
 	Username string `json:"username"`
 	IssuedAt int64  `json:"iat"`
 	ExpireAt int64  `json:"exp"`
 }
 
-func (j *JwtHeader) String() string {
+func (j *Header) String() string {
 	b, err := json.Marshal(j)
 	if err != nil {
 		log.Fatal(err)
@@ -49,7 +49,7 @@ func (j *JwtHeader) String() string {
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 
-func (j *JwtClaim) String() string {
+func (j *Claim) String() string {
 	b, err := json.Marshal(j)
 	if err != nil {
 		log.Fatal(err)
@@ -57,7 +57,7 @@ func (j *JwtClaim) String() string {
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 
-func (j *JwtValidator) ValidateToken(token string) (*JwtClaim, bool) {
+func (j *Validator) ValidateToken(token string) (*Claim, bool) {
 	arr := strings.Split(token, ".")
 	if len(arr) < 3 {
 		return nil, false
@@ -88,8 +88,8 @@ func (j *JwtValidator) ValidateToken(token string) (*JwtClaim, bool) {
 	return claim, true
 }
 
-func (j *JwtValidator) ToHeader(encoded string) (*JwtHeader, error) {
-	var header JwtHeader
+func (j *Validator) ToHeader(encoded string) (*Header, error) {
+	var header Header
 	b, err := base64.RawURLEncoding.DecodeString(encoded)
 	if err != nil {
 		return nil, err
@@ -100,8 +100,8 @@ func (j *JwtValidator) ToHeader(encoded string) (*JwtHeader, error) {
 	return &header, nil
 }
 
-func (j *JwtValidator) ToClaim(encoded string) (*JwtClaim, error) {
-	var claim JwtClaim
+func (j *Validator) ToClaim(encoded string) (*Claim, error) {
+	var claim Claim
 	b, err := base64.RawURLEncoding.DecodeString(encoded)
 	if err != nil {
 		return nil, err
@@ -113,7 +113,7 @@ func (j *JwtValidator) ToClaim(encoded string) (*JwtClaim, error) {
 }
 
 func FetchPublicKey() (*rsa.PublicKey, error) {
-	resp, err := http.Get("http://localhost:8080/api/pubkey")
+	resp, err := http.Get("http://qbit.plasmoid.io/api/pubkey")
 	if err != nil {
 		return nil, fmt.Errorf("error fetching pubkey: %s", err)
 	}
@@ -154,7 +154,7 @@ func GetToken(username string, password string) (string, error) {
 		return "", err
 	}
 
-	resp, err := http.Post("http://localhost:8080/api/login", "application/json", bytes.NewBuffer(data))
+	resp, err := http.Post("http://qbit.plasmoid.io/api/login", "application/json", bytes.NewBuffer(data))
 	if err != nil {
 		return "", err
 	}
@@ -202,7 +202,7 @@ func Register(username string, password string) error {
 		return err
 	}
 
-	resp, err := http.Post("http://localhost:8080/api/register", "application/json", bytes.NewBuffer(data))
+	resp, err := http.Post("http://qbit.plasmoid.io/api/register", "application/json", bytes.NewBuffer(data))
 	if err != nil {
 		return err
 	}

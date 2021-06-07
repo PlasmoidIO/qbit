@@ -28,13 +28,6 @@ type JwtClaim struct {
 	ExpireAt int64  `json:"exp"`
 }
 
-func NewJwtHandler(key *rsa.PrivateKey, expirationHours int) JwtHandler {
-	return JwtHandler{
-		PrivateKey:      key,
-		ExpirationHours: expirationHours,
-	}
-}
-
 func (j *JwtHeader) String() string {
 	b, err := json.Marshal(j)
 	if err != nil {

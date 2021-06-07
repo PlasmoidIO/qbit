@@ -158,7 +158,10 @@ func main() {
 		log.Fatalf("public key invalid")
 		return
 	}
-	jwtHandler := authentication.NewJwtHandler(privateKey, 24)
+	jwtHandler := authentication.JwtHandler{
+		PrivateKey:      privateKey,
+		ExpirationHours: 24,
+	}
 
 	profileManager, err := authentication.NewProfileManager("srv-captain--qbit-db:3306", "qbit", "root", "qbit")
 	if err != nil {
