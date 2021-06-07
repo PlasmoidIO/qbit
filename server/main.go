@@ -117,7 +117,9 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !a.UserProfileManager.AreCredentialsValid(username, password) {
+	var valid bool
+	username, valid = a.UserProfileManager.AreCredentialsValid(username, password)
+	if !valid {
 		respondWithJSON(w, 400, ErrorResponse{"credentials provided are invalid"})
 		return
 	}
@@ -175,6 +177,9 @@ func main() {
 	router.HandleFunc("/api/register", app.register)
 	router.HandleFunc("/api/pubkey", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = fmt.Fprint(w, string(publicFile))
+	})
+	router.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "https://google.com/", 302)
 	})
 
 	fmt.Println("Listening on port 80...")

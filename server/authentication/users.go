@@ -49,17 +49,18 @@ func (u *UserProfileManager) RegisterUser(username string, password string) erro
 	return err
 }
 
-func (u *UserProfileManager) AreCredentialsValid(username string, password string) bool {
-	rows, err := u.Database.Query("SELECT password FROM users WHERE username=?", username)
+func (u *UserProfileManager) AreCredentialsValid(username string, password string) (string, bool) {
+	rows, err := u.Database.Query("SELECT username, password FROM users WHERE username=?", username)
 	if err != nil || !rows.Next() {
-		return false
+		return "", false
 	}
 
+	var user string
 	var hash string
-	if err := rows.Scan(&hash); err != nil {
-		return false
+	if err := rows.Scan(&user, &hash); err != nil {
+		return "", false
 	}
-	return u.IsPasswordValid(password, hash)
+	return user, u.IsPasswordValid(password, hash)
 }
 
 func (u *UserProfileManager) IsPasswordValid(password string, hash string) bool {
