@@ -177,7 +177,7 @@ func main() {
 		_, _ = fmt.Fprint(w, string(publicFile))
 	})
 
-	if err := http.ListenAndServe(":4201", router); err != nil {
+	if err := http.ListenAndServe(":80", router); err != nil {
 		fmt.Printf("Error: %s\n", err)
 	}
 }
