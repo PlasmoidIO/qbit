@@ -113,7 +113,7 @@ func (j *Validator) ToClaim(encoded string) (*Claim, error) {
 }
 
 func FetchPublicKey() (*rsa.PublicKey, error) {
-	resp, err := http.Get("http://qbit.plasmoid.io/api/pubkey")
+	resp, err := http.Get("http://localhost:8001/api/pubkey")
 	if err != nil {
 		return nil, fmt.Errorf("error fetching pubkey: %s", err)
 	}

@@ -153,7 +153,7 @@ func main() {
 		ExpirationHours: 24,
 	}
 
-	profileManager, err := authentication.NewProfileManager("srv-captain--qbit-db:3306", "qbit", "root", "qbit")
+	profileManager, err := authentication.NewProfileManager("127.0.0.10:3306", "qbit", "root", "root")
 	if err != nil {
 		log.Fatalf("error initializing profile manager: %s\n", err)
 		return
@@ -175,8 +175,8 @@ func main() {
 		http.Redirect(w, r, "https://google.com/", 302)
 	})
 
-	fmt.Println("Listening on port 80...")
-	if err := http.ListenAndServe(":80", router); err != nil {
+	fmt.Println("Listening on port 8001...")
+	if err := http.ListenAndServe(":8001", router); err != nil {
 		fmt.Printf("Error: %s\n", err)
 	}
 }
