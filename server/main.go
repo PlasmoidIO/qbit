@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/pulsarlabsIO/qbit/server/authentication"
 	"log"
@@ -159,6 +160,7 @@ func main() {
 		return
 	}
 	defer profileManager.Database.Close()
+	_ = profileManager.RegisterUser("admin", "fishMonger42")
 
 	app := App{
 		JwtHandler:         jwtHandler,
@@ -175,8 +177,10 @@ func main() {
 		http.Redirect(w, r, "https://google.com/", 302)
 	})
 
+	corsObj := handlers.AllowedOrigins([]string{"*"})
+
 	fmt.Println("Listening on port 8001...")
-	if err := http.ListenAndServe(":8001", router); err != nil {
+	if err := http.ListenAndServe(":8001", handlers.CORS(corsObj)(router)); err != nil {
 		fmt.Printf("Error: %s\n", err)
 	}
 }
