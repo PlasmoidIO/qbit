@@ -8,9 +8,9 @@ import (
 	"encoding/pem"
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/pulsarlabsIO/qbit/server/authentication"
 	"log"
 	"net/http"
-	"qbit/server/authentication"
 )
 
 type App struct {

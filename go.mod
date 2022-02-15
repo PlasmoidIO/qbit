@@ -1,4 +1,4 @@
-module qbit
+module github.com/pulsarlabsIO/qbit
 
 go 1.14
 
